@@ -46,15 +46,45 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private Bitmap run1,run2;
     private int screenX,screenY,scaledX,scaledY;
     private boolean isRightPressed,isLeftPressed;
+    private int HPCount;
+    //count down while the hp is 0, restart the game after gameOverCount is 0;
+    private int gameOverCount;
+
     //if left or right is pressed, increase or decrease this value;
     private int countMovement;
+    final int weaponLength = 120;
     public GameView(Context context, AttributeSet attrs) {
         super(context, attrs);
         holder = getHolder();
+        HPCount=6;
         holder.addCallback(this);
         myContext = context;
         myThread = new MyThread();
+        myThread.setRunning(true);
+        background = BitmapFactory.decodeResource(myContext.getResources(), R.drawable.background);
+        run1=BitmapFactory.decodeResource(myContext.getResources(), R.drawable.run1);
+        run2 = BitmapFactory.decodeResource(myContext.getResources(), R.drawable.run2);
+        run1 = Bitmap.createScaledBitmap(run1, 150, 150, true);
+        run2 = Bitmap.createScaledBitmap(run2, 150, 150, true);
+        leftBtn = BitmapFactory.decodeResource(myContext.getResources(), R.drawable.left);
+        rightBtn = BitmapFactory.decodeResource(myContext.getResources(), R.drawable.right);
+        paint = new Paint();
+        paint_black = new Paint();
+        paint_transparent = new Paint();
+        paint_transparent.setAntiAlias(true);
+        paint_transparent.setColor(Color.TRANSPARENT);
+        paint_black.setAntiAlias(true);
 
+        paint_black.setColor(Color.BLACK);
+        paint.setAntiAlias(true);
+        paint.setColor(Color.RED);
+        paint.setTextSize(60);
+        isRightPressed = false;
+        isLeftPressed = false;
+        countMovement = 0;
+        shootFramCount = 0;
+        gameOverCount=300;
+        Log.d("J","int the GameView Constructop");
     }
 
     class MyThread extends Thread{
@@ -74,24 +104,28 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                     countMovement++;
                 }else if (isLeftPressed){
                     countMovement--;
+                }if (objectX>(200+countMovement*12)&&objectX < (200+countMovement*12+5)){
+                    //object hits the man
+                    HPCount--;
+                    Log.d("J",HPCount+"hp count is ");
                 }
                 synchronized (holder) {
                     if (drawObject) {
                         //randomly move object back
                         if (objectMoveBackCount == 0){
-                            objectMoveBackTrue = (new Random().nextInt(65000)%20==0);
+                            objectMoveBackTrue = (new Random().nextInt(65000)%60==0);
                             objectMoveBackCountTotal = new Random().nextInt(15)+16;
                         }
                         if (objectMoveBackTrue&&objectMoveBackCount<objectMoveBackCountTotal){
                             objectMoveBackCount++;
-                            objectX+=15;
+                            objectX+=5;
                             if (objectX>screenX-60) {
                                 objectX= screenX-60;
                                 objectMoveBackCount = 0;
                                 objectMoveBackTrue = false;
                             }
                         }else {
-                            objectX -= 15;
+                            objectX -= 5;
                             if (objectX < 0)
                                 objectX = screenX + 20;
                             objectMoveBackCount = 0;
@@ -104,10 +138,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                     if (pressed) {
                         drawOrigPosition = false;
                         //draw the drump
-                        c.drawBitmap(run1,200+countMovement*50,(float) (screenY * 0.8 - countFrame * 52)-run1.getHeight()-60, null);
+                        c.drawBitmap(run1,200+countMovement*12,(float) (screenY * 0.6 - countFrame * 16)-run1.getHeight()-60, null);
                         //c.drawRect(200, (float) (screenY * 0.8 - 80 - countFrame * 32), 220, (float) (screenY * 0.8 - countFrame * 32), paint);
                         //control the height of the jump
-                        if (countFrame <6 && incrementCount) {
+                        if (countFrame <18 && incrementCount) {
                             countFrame++;
                         }
                         else {
@@ -129,27 +163,41 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                         objectX = screenX+200;
                     }
                 }
+                if (HPCount <=0){
+                    if (gameOverCount<0) {
+                        HPCount = 10;
+                        gameOverCount = 300;
+                    }else {
+                        gameOverCount--;
+                        c.drawBitmap(background, 0, 0, null);
+                        c.drawText("Game Over, restart in : " + ((int)(gameOverCount/100)+1), (float) (screenX * 0.36), (float) (screenY * 0.3), paint);
+
+                    }
+                }
                 holder.unlockCanvasAndPost(c);
 
             }
         }
         public void draw(Canvas canvas){
-            canvas.drawRect(0,(float)(screenY*0.8),screenX,(float)(screenY*0.8+15),paint);
-            canvas.drawRect(screenX-160,20,screenX,180,paint);
-            canvas.drawRect(0, 20, 160, 180, paint);
-            canvas.drawText("Jump", screenX - 130, 120, paint_black);
-            canvas.drawText("Shoot", 10, 120, paint_black);
+            //base line
+            canvas.drawRect(0,(float)(screenY*0.6),screenX,(float)(screenY*0.6+15),paint);
+            //hp line
+            canvas.drawRect((float) (screenX*0.3),(float)(screenY*0.1),(float)(screenX*0.3+HPCount*20),(float)(screenY*0.1+15),paint);
+            canvas.drawRect(screenX-160, (float) (screenY*0.8-screenY*0.1),screenX, (float) (screenY*0.8),paint);
+            canvas.drawRect(screenX-480,  (float) (screenY*0.8-screenY*0.1), screenX-320,  (float) (screenY*0.8), paint);
+            canvas.drawText("Jump", screenX - 126, (float) (screenY*0.8-screenY*0.04), paint_black);
+            canvas.drawText("Hit", screenX - 426, (float) (screenY*0.8-screenY*0.04), paint_black);
             //draw the left and right move buttons{
-            canvas.drawBitmap(leftBtn, 0, (int) (screenY * 0.12), null);
-            canvas.drawBitmap(rightBtn,screenX-rightBtn.getWidth(),(int)(screenY*0.12),null);
+            canvas.drawBitmap(leftBtn, 0, (int) (screenY * 0.69), null);
+            canvas.drawBitmap(rightBtn,leftBtn.getWidth()+20,(int)(screenY*0.69),null);
             //end of drawing the left right button
             if (drawOrigPosition) {
                 //canvas.drawRect(200, (float) (screenY * 0.8 - 80), 220, (float) (screenY * 0.8), paint);
                 if (run) {
                     //canvas.drawRect(200, (float) (screenY * 0.8 - 80 - countFrame * 32), 220, (float) (screenY * 0.8 - countFrame * 32), paint);
-                    if (countRun <2&&isTrueCountRun) {
+                    if (countRun <8&&isTrueCountRun) {
                         countRun++;
-                        canvas.drawBitmap(run1, 200+countMovement*50, (float) (screenY * 0.8 - countFrame * 32)-run1.getHeight(), null);
+                        canvas.drawBitmap(run1, 200+countMovement*12, (float) (screenY * 0.6 - countFrame * 16)-run1.getHeight(), null);
                     }else{
                         isTrueCountRun = false;
                         run = false;
@@ -157,7 +205,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 }else {
                     if (countRun>0&&!isTrueCountRun) {
                         countRun--;
-                        canvas.drawBitmap(run2,200+countMovement*50, (float) (screenY * 0.8 - countFrame * 32)-run1.getHeight(), null);
+                        canvas.drawBitmap(run2,200+countMovement*12, (float) (screenY * 0.6 - countFrame * 16)-run1.getHeight(), null);
                     }else{
                         run = true;
                         isTrueCountRun = true;
@@ -167,7 +215,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 }
             }
 
-            canvas.drawRect(objectX, (float) (screenY * 0.8 - 140), objectX+20, (float) (screenY * 0.8), paint);
+            canvas.drawRect(objectX, (float) (screenY * 0.6 - 140), objectX+20, (float) (screenY * 0.6), paint);
 
             //draw bullet
             if(isShoot) {
@@ -175,17 +223,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 //                locationX+=20;
                 //control the speed that the weapon disapear
                 shootFramCount++;
-                if (shootFramCount >2) {
+                if (shootFramCount >16) {
                     isShoot = false;
                     shootFramCount=0;
                 }
-                int x = locationX+countMovement*50+run1.getWidth();
+                int x = locationX+countMovement*12+run1.getWidth();
                 paint.setColor(Color.DKGRAY);
-                canvas.drawRect(x, (float) (screenY * 0.8 - countFrame * 52 - run1.getHeight()) + 10, x + 80, (float) (screenY * 0.8 - countFrame * 52 - run1.getHeight()) + 40, paint);
+                canvas.drawRect(x, (float) (screenY * 0.6 - countFrame * 16 - run1.getHeight()) + 10, x + weaponLength, (float) (screenY * 0.6 - countFrame * 16 - run1.getHeight()) + 40, paint);
                 paint.setColor(Color.RED);
             }else {
-                int x = locationX+countMovement*50+run1.getWidth();
-                canvas.drawRect(x,(float) (screenY * 0.8 - countFrame * 52-run1.getHeight())+10,x+80,(float) (screenY * 0.8 - countFrame * 52-run1.getHeight())+40,paint_transparent);
+                int x = locationX+countMovement*12+run1.getWidth();
+                canvas.drawRect(x,(float) (screenY * 0.6 - countFrame * 16-run1.getHeight())+10,x+weaponLength,(float) (screenY * 0.6 - countFrame * 16-run1.getHeight())+40,paint_transparent);
             }
         }
         public void setRunning(boolean r){isRunning = r;}
@@ -201,17 +249,23 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         float y= event.getY();
         switch (action){
             case MotionEvent.ACTION_DOWN:
-                if (!pressed&& x <screenX&&x > screenX-160 &&y >20 &&y <180) {
+                if (!pressed&& x >screenX-160&&x < screenX &&y >(float) (screenY*0.8-screenY*0.1) &&y <(float) (screenY*0.8)) {
                     pressed = true;
                     incrementCount = true;
                     countFrame = 0;
                 }
-                else if (x>0&&x<160 &&y>20 &&y <180){
+                else if (x>screenX-480&&x<screenX-320 &&y >(float) (screenY*0.8-screenY*0.1) &&y <(float) (screenY*0.8)){
                     isShoot = true;
+                    int tempX = locationX+countMovement*12+run1.getWidth();;
+                    if (objectX > tempX && objectX< tempX+weaponLength){
+                        //weapon touches the object, the object disapear
+                        drawObject=false;
+                        objectX = screenX+200;
+                    }
                 }else if (x>0&&x<leftBtn.getWidth() && (y>(screenY*0.1))&&y<(screenY+leftBtn.getHeight())){
                     //pressed the leftButton
                     isLeftPressed = true;
-                }else if (x>(screenX-rightBtn.getWidth())&&x<screenX && (y>(screenY*0.1))&&y<(screenY+leftBtn.getHeight())){
+                }else if (x>(leftBtn.getWidth()+20)&&x<(leftBtn.getWidth()+rightBtn.getWidth()+20) && (y>(screenY*0.1))&&y<(screenY+leftBtn.getHeight())){
                     //pressed the right Button
                     isRightPressed = true;
                 }
@@ -232,31 +286,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     }
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        background = BitmapFactory.decodeResource(myContext.getResources(), R.drawable.background);
-        run1=BitmapFactory.decodeResource(myContext.getResources(), R.drawable.run1);
-        run2 = BitmapFactory.decodeResource(myContext.getResources(), R.drawable.run2);
-        run1 = Bitmap.createScaledBitmap(run1, 150, 150, true);
-        run2 = Bitmap.createScaledBitmap(run2, 150, 150, true);
-        leftBtn = BitmapFactory.decodeResource(myContext.getResources(), R.drawable.left);
-        rightBtn = BitmapFactory.decodeResource(myContext.getResources(), R.drawable.right);
-        myThread.setRunning(true);
-        if (myThread.getState() ==Thread.State.NEW)
-            myThread.start();
+        Log.d("J","int the GameView surfaceCreated");
 
-        paint = new Paint();
-        paint_black = new Paint();
-        paint_transparent = new Paint();
-        paint_transparent.setAntiAlias(true);
-        paint_transparent.setColor(Color.TRANSPARENT);
-        paint_black.setAntiAlias(true);
-        paint_black.setTextSize(50);
-        paint_black.setColor(Color.BLACK);
-        paint.setAntiAlias(true);
-        paint.setColor(Color.RED);
-        isRightPressed = false;
-        isLeftPressed = false;
-        countMovement = 0;
-        shootFramCount = 0;
+        //if (myThread.getState() ==Thread.State.NEW)
+        myThread.start();
 
     }
 
@@ -269,17 +302,25 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         double sx = width/tempx;
         double sy = height/tempy;
         locationX = 200;
-        locationY = (int) ((screenY * 0.8 - countFrame * 32)-run1.getHeight() + 20);
+        locationY = (int) ((screenY * 0.8 - countFrame * 20)-run1.getHeight() + 20);
         //Log.d("J","screen:"+tmx + "   "+height + " image"+tempx+"   "+background.getHeight());
         background =Bitmap.createScaledBitmap(background,(int)(background.getWidth()*sx),(int)(background.getHeight()*sy),true);
         leftBtn = Bitmap.createScaledBitmap(leftBtn,(int)(screenX*0.12),(int)(screenX*0.12),true);
         rightBtn = Bitmap.createScaledBitmap(rightBtn,(int)(screenX*0.12),(int)(screenX*0.12),true);
-
+        paint.setTextSize((float)(screenX*0.03));
+        paint_black.setTextSize((float)(screenX*0.02));
         objectX = screenX+200;
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         myThread.setRunning(false);
+        myThread.destroy();
+        myThread.stop();
+        try {
+            myThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }
