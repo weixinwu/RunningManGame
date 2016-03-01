@@ -6,6 +6,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -23,6 +24,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.gamelayout);
         gameView = (GameView)findViewById(R.id.game_view);
         gameView.setKeepScreenOn(true);
+
     }
 
     @Override
@@ -46,4 +48,13 @@ public class MainActivity extends Activity {
 
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        Log.d("J", "back button pressed");
+        gameView.setIsRunning(false);
+
+    }
+
 }
